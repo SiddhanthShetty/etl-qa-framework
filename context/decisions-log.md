@@ -25,6 +25,9 @@ The decisions taken while drafting the spec, and why. Update this file whenever 
 | 2026-11-15 | Design assumes the latest Xray release; Cloud or Server/Data Center import endpoint is configurable | Confirmed by the QA lead |
 | 2026-11-15 | DQX and reconciliation each have their own log tables (confirmed); columns documented in Story 1.4 | Confirmed by the QA lead |
 | 2026-11-15 | Known apps in scope: lineage detection and dashboard; others to be listed in Story 1.1 | Confirmed by the QA lead |
+| 2026-11-15 | Sections 1 to 19 cut to 20 A4 pages (from about 39); every decision kept, deep detail moved to appendices | Requested by the QA lead (Step 2) |
+| 2026-11-15 | Full backlog stories moved to a separate Backlog tab; section 20 keeps the epic table, sizes and first increment | Requested by the QA lead (Step 2) |
+| 2026-11-15 | New Appendix C: rule examples, unified view columns, spec-driven example, RACI, failure scenario catalogue (was in 8.2) | Requested by the QA lead (Step 2) |
 
 ## Still open
 

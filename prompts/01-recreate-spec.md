@@ -13,7 +13,7 @@ You are helping me, a QA Test Automation Lead, write the QA Testing Framework Sp
 - **CDP** is our data product. Databricks is the central platform: Unity Catalog, Databricks jobs (Workflows), Delta tables, Auto Loader ingestion and a bronze, silver and gold layout.
 - **Goal:** make CDP a trustworthy, higher-quality product, with the testing framework in place first.
 - **Reviewers:** Kedar, Gagan and Sukesh review the spec. The Product team then prioritises the backlog in its last section.
-- **Length:** 15 to 20 pages for sections 1 to 19. Detailed code goes in an appendix.
+- **Length:** 15 to 20 pages for sections 1 to 19. Code, catalogues and worked examples go in the appendices, and the full backlog stories go in a separate Backlog tab or file.
 
 ## What already exists (reuse it; don't rebuild it)
 
@@ -111,17 +111,17 @@ You are helping me, a QA Test Automation Lead, write the QA Testing Framework Sp
 5. Tooling and ownership: tool table, "which tool" table, coverage matrix.
 6. Functional and integration testing: approach, standard scenarios including erasure, integration scenarios, pass criteria, Databricks Apps (FastAPI and React).
 7. Transformation and boundary value testing.
-8. Failure testing: four assertions (safe state, detection, alerting, recovery), scenario catalogue, rules.
+8. Failure testing: four assertions (safe state, detection, alerting, recovery), scenarios summarised in four groups (full catalogue in Appendix C.5), rules.
 9. NFR: pre-release tests, how they run, test principals, production monitoring.
 10. Data quality and reconciliation integration: what QA does and does not do, wiring tests, requesting a new rule.
 11. Automation and Jenkins: automation ratio, one-time setup, pipeline stages and triggers, unified results view and run correlation.
 12. Manual and process testing.
-13. Spec-driven development: flow, example, definition of ready, definition of done, AI assistance (expected results always come from the spec).
+13. Spec-driven development: 13.1 flow, 13.2 definition of ready, 13.3 definition of done, 13.4 AI assistance (expected results always come from the spec). The worked example is in Appendix C.3.
 14. Test data and environments: environments, data types, rules, privacy.
 15. Entry and exit criteria: release gate, waivers, suspension.
 16. Defects and reporting: priority and severity, triage, flaky tests, reporting tools, dashboard, rhythm.
-17. Roles and responsibilities (RACI).
-18. Generic CDP layer and LoB context: layers, configuration file per LoB, onboarding.
+17. Roles and responsibilities (summary; the full RACI is in Appendix C.4).
+18. Generic CDP layer and LoB context: 18.1 layers and configuration file per LoB, 18.2 onboarding checklist.
 19. Risks, assumptions and open questions.
 20. Backlog. Eight epics:
     1. inventory
@@ -133,10 +133,11 @@ You are helping me, a QA Test Automation Lead, write the QA Testing Framework Sp
     7. release gate
     8. further LoB onboarding
     
-    Each story is written as "As a…, I want…, so that…", with a size (S, M or L), acceptance criteria and tasks.
+    Section 20 holds only the epic table, the size definitions and the first increment. The stories themselves go in a separate Backlog tab, each written as "As a…, I want…, so that…", with a size (S, M or L), acceptance criteria and tasks.
 
 **Appendix A:** code samples (functional test, transformation test, failure test, repository layout, Jenkinsfile, LoB configuration YAML, Databricks App API and UI tests).
 **Appendix B:** why ReportPortal is not adopted.
+**Appendix C:** C.1 transformation rule examples, C.2 unified view columns, C.3 spec-driven example story, C.4 RACI, C.5 failure scenario catalogue.
 
 ## Writing rules
 

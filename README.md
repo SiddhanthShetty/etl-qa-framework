@@ -11,7 +11,8 @@ cdp-qa-framework/
 ├── spec/
 │   ├── CDP_QA_Testing_Framework_Specification.pdf    # read-only copy for reviewers
 │   ├── CDP_QA_Testing_Framework_Specification.docx   # editable Word copy
-│   └── CDP_QA_Testing_Framework_Specification.md     # plain-text source, best for diffs and AI prompts
+│   ├── CDP_QA_Testing_Framework_Specification.md     # plain-text source, best for diffs and AI prompts
+│   └── CDP_QA_Backlog.pdf                            # full user stories (the doc's Backlog tab)
 ├── prompts/
 │   ├── 01-recreate-spec.md        # rebuild the whole spec from scratch
 │   ├── 02-independent-review.md   # a cold review by a separate reviewer
@@ -33,7 +34,7 @@ After any change, update the Markdown spec first, regenerate the PDF and DOCX fr
 ## Notes
 
 - Table names, SLAs and targets in the spec are illustrative until Epic 1 measures the real baseline.
-- The PDF is 54 A4 pages: sections 1 to 19, the full backlog and the appendices. The 15 to 20 page target applies to the main body; prompt 3.4 covers bringing it into range.
+- Sections 1 to 19 fill exactly 20 A4 pages (down from about 39). The spec PDF is 30 pages including the section 20 epic summary and Appendices A to C. The full user stories are in `spec/CDP_QA_Backlog.pdf` (8 pages).
 - This repository contains internal project content, including reviewer names and whiteboard photos. Keep it in a private repository.
 
 ## Push to GitHub

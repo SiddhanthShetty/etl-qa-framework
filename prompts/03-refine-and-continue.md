@@ -26,7 +26,7 @@ Each block below is a separate prompt. Attach the current `spec/CDP_QA_Testing_F
 
 > Here are comments from Kedar, Gagan and Sukesh: [paste]. For each comment, either change the spec or explain in one line why not. Show the changes as a table of section, change and reviewer. Don't change anything that no comment asked for.
 
-## 3.4 Bring the main body to 15 to 20 pages
+## 3.4 Bring the main body to 15 to 20 pages (done 2026-11-15: sections 1 to 19 are 20 pages)
 
 > The main body (sections 1 to 19) must fit in 15 to 20 A4 pages. Cut duplication first, then detail that belongs in the appendix or the backlog. Do not remove any decision, requirement or open question. Report the word count before and after.
 
