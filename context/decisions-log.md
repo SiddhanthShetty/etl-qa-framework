@@ -28,6 +28,11 @@ The decisions taken while drafting the spec, and why. Update this file whenever 
 | 2026-11-15 | Sections 1 to 19 cut to 20 A4 pages (from about 39); every decision kept, deep detail moved to appendices | Requested by the QA lead (Step 2) |
 | 2026-11-15 | Full backlog stories moved to a separate Backlog tab; section 20 keeps the epic table, sizes and first increment | Requested by the QA lead (Step 2) |
 | 2026-11-15 | New Appendix C: rule examples, unified view columns, spec-driven example, RACI, failure scenario catalogue (was in 8.2) | Requested by the QA lead (Step 2) |
+| 2026-11-15 | Second independent review triaged (context/reviews/review-2-triage.md); all Accept and Partly findings applied; moving failure scenarios back into 8.2 rejected | QA lead approved ("go") |
+| 2026-11-15 | Cost is not a release-gate condition: billing data arrives next day; an overrun raises an S3 defect | QA lead decision (review 2, H6) |
+| 2026-11-15 | DQX and reconciliation count as two Xray gate tests per pipeline, one per framework | QA lead decision (review 2, M3) |
+| 2026-11-15 | Release gate joins the unified view with Jira defects and Xray waivers and UAT; view gains a stage column; missing required-stage evidence is no-go | Review 2, H1/M12 |
+| 2026-11-15 | Pilot app results go to Allure and Xray; unified-view publishing comes with Story 4.1. NFR always runs for release candidates. Epics 4 and 5 resized to L | Review 2, H2/H5/M11 |
 
 ## Still open
 

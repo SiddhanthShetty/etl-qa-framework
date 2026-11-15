@@ -11,12 +11,8 @@ The framework does not replace what exists. It joins the DQX data quality framew
 - **Status:** draft for review by Kedar, Gagan and Sukesh.
 - **Decision needed:** the Product team prioritises the backlog in section 20.
 - **Automation split:** 80–85% automated, 15–20% manual or process.
-- **New work for QA:** functional, transformation, failure, NFR and app tests; Jenkins orchestration; one unified results view and dashboard.
-- **Reused as is:**
-  - DQX for data quality;
-  - the reconciliation framework;
-  - developer unit tests;
-  - the existing pytest framework with Allure.
+- **New work for QA:** functional, transformation, failure, non-functional (NFR) and app tests; Jenkins orchestration; one unified results view and dashboard.
+- **Reused as is:** DQX for data quality, the reconciliation framework, developer unit tests, and the existing pytest framework with Allure.
 
 Reviewers are asked to confirm four things:
 
@@ -29,7 +25,7 @@ Reviewers are asked to confirm four things:
 
 CDP needs one agreed way of testing, so that quality does not depend on who built a pipeline or which line of business it serves.
 
-**In scope:** ingestion into bronze through Auto Loader; bronze to silver to gold transformations; consumer-facing gold tables and views; CDP's Databricks Apps (FastAPI and React), such as the lineage detection and dashboard apps (section 6.5); the jobs that run them, including schedules, dependencies, retries and alerts; Unity Catalog access control and masking; and deployment to test through Jenkins.
+**In scope:** ingestion into bronze through Auto Loader; bronze to silver to gold transformations; consumer-facing gold tables and views; CDP's Databricks Apps (section 6.5); the jobs that run them, including schedules, dependencies, retries and alerts; Unity Catalog access control and masking; and deployment to test through Jenkins.
 
 **Out of scope:** the correctness of source systems; downstream applications outside CDP; the internals of DQX and reconciliation (this spec covers how they are used and gated); unit tests, which developers own; and the Databricks platform itself.
 
@@ -46,7 +42,7 @@ CDP needs one agreed way of testing, so that quality does not depend on who buil
 "Trustworthy" is defined as nine measures. They give the team a release gate that is the same every time, and give the Product team a trend they can read without knowing the tools. Targets are proposed until Epic 1 measures the baseline.
 
 1. **Automation ratio:** 80–85%. Measured as automated Xray tests in scope (tier 1 and 2) ÷ all Xray tests in scope, per release.
-2. **Automated coverage of tier 1 tables:** 80% within two quarters.
+2. **Automated coverage of tier 1 tables:** 80% of tier 1 tables have every applicable QA test type automated and gated, within two quarters.
 3. **Regression pass rate:** stable at or above 95%. This is a trend, not a gate (section 15).
 4. **Defect leakage:** at most 2 production defects per release, and no S1.
 5. **Tier 1 data incidents:** down 50% from the baseline.
@@ -61,7 +57,7 @@ CDP follows the V-model: each build stage has a matching test stage, designed wh
 
 ### 4.1 V-model levels
 
-- **Requirements ↔ UAT:** the product does what the business asked. Owned by the line of business, supported by QA.
+- **Requirements ↔ user acceptance testing (UAT):** the product does what the business asked. Owned by the line of business, supported by QA.
 - **Architecture and design ↔ QA system and integration testing.** Owned by QA.
 - **Code ↔ unit testing.** Owned by developers.
 
@@ -100,7 +96,7 @@ Each table, pipeline and app is given a tier in Epic 1.
 - **Targeted (every merge):** regression tests for the touched pipelines and their downstream dependants. Smoke and targeted share the 18-minute merge test stage.
 - **Full (nightly and release candidate):** every regression test, within 90 minutes.
 
-Touched pipelines come from the changed files through the LoB configuration (section 18), and their dependants from production lineage in `system.access.table_lineage`. If the mapping is unclear, the merge runs smoke for all tier 1 pipelines, and the full suite runs that night. The budget is met by running each pipeline once with many assertions, running pipelines in parallel with `pytest-xdist`, and using serverless or pooled compute. All budgets are validated in the Epic 3 pilot.
+Touched pipelines come from the changed files, matched against the code paths in the line-of-business (LoB) configuration (section 18), and their dependants from production lineage in `system.access.table_lineage`. If the mapping is unclear, the merge runs smoke for all tier 1 pipelines, and the full suite runs that night. The budget is met by running each pipeline once with many assertions (its cases share one xdist worker), running pipelines in parallel with `pytest-xdist`, and using serverless or pooled compute. All budgets are validated in the Epic 3 pilot.
 
 ### 4.7 Lifecycle of a test
 
@@ -186,7 +182,7 @@ Every tier 1 pipeline is tested against these scenarios where they apply.
 - **Late-arriving data:** lands in the correct period, and aggregates update.
 - **Consent filter:** customers with `consent = N` are absent from the marketing view.
 - **Empty file:** the job succeeds, gold is unchanged, and the run is logged.
-- **Erasure request:** removed from every gold table and view, and purged from Delta history after retention and VACUUM.
+- **Erasure request:** removed from landing files, every layer and downstream copies, and purged from Delta history (REORG … APPLY (PURGE) where deletion vectors are on, then VACUUM); a RESTORE cannot bring them back.
 
 ### 6.3 Integration scenarios
 
@@ -205,24 +201,18 @@ A functional test passes only when the job succeeds and every assertion holds. R
 
 CDP has several UI apps, tested mostly at API level, with only a few critical journeys in a browser. The two known apps set the pattern; Story 1.1 lists the rest.
 
-- **Lineage detection app:**
-  - lineage for a known table matches its source of truth (for example `system.access.table_lineage`);
-  - users see lineage only for tables they can access;
-  - new and dropped tables appear or disappear after refresh.
-- **Dashboard app:**
-  - each KPI equals the matching SQL on gold for the same filters and dates;
-  - filters and empty states work;
-  - stale data is never shown as current.
+- **Lineage detection app:** lineage for a known table matches its source of truth (for example `system.access.table_lineage`); users see lineage only for tables they can access; new and dropped tables appear or disappear after refresh.
+- **Dashboard app:** each KPI equals the matching SQL on gold for the same filters and dates; filters and empty states work; stale data is never shown as current.
 
 * **Unit (developers):** FastAPI `TestClient`, and Vitest or Jest, in the developer build.
 * **API, contract and data correctness (merge):** pytest with `httpx` checks status codes, the OpenAPI schema and bad input, and that API numbers equal a direct query on the build's gold.
 * **Access (merge, priority 1):** each role principal sees only its data, and unauthenticated calls are refused.
 * **UI journeys (nightly):** three to five critical journeys in Playwright.
 * **Failure (nightly):** a stopped warehouse, missing table or backend error shows a clear message, never stale data.
-* **Load (release candidate):** Locust against the targets in section 9.
+* **Load (release candidate):** Locust for API load and Playwright timings for critical pages, against the targets in section 9.
 
 - **Isolation:** each build deploys its own app copy, pointed at its own test data. If workspace app limits make that impractical, one shared test app is used and builds run one at a time.
-- **Sign-in:** API tests send a test service principal's OAuth token in the `Authorization` header ([Databricks docs](https://docs.databricks.com/gcp/dev-tools/databricks-apps/connect-local)). Unattended Playwright sign-in is unproven; Story 2.9 is a spike to settle it.
+- **Sign-in:** API tests send a test service principal's OAuth token in the `Authorization` header ([Databricks docs](https://docs.databricks.com/gcp/dev-tools/databricks-apps/connect-local)). Unattended Playwright sign-in is unproven; Story 2.9 is a spike to settle it. Callers need CAN USE on the app; access tests follow each app's data access model (section 19.3).
 - **Reporting:** results carry Xray keys and appear in Allure and the unified view as test type `app`. Failed UI tests attach a Playwright trace. There are examples in Appendix A.7.
 
 ## 7. Transformation and boundary value testing
@@ -265,7 +255,7 @@ The catalogue in Appendix C.5 covers 15 scenarios:
 - **Repeated or disordered input:** duplicate deliveries, out-of-order files, volume spikes.
 - **Access and recovery:** revoked permissions, rollback with Delta `RESTORE`.
 
-Auto Loader behaviour matters in several of these. Its default `addNewColumns` mode turns a renamed column into silent nulls, and its checkpoint de-duplicates by file path only. The schema-evolution and bad-record policy for each tier is still open (Story 2.7). There is an example test in Appendix A.3.
+Auto Loader behaviour matters in several of these. With `addNewColumns` (the default only when no schema is supplied; otherwise `none`), a renamed column stops the stream with an `UnknownFieldException`; after a restart the new column is added and the old one is null for new rows. Its checkpoint also de-duplicates by file path only. The schema-evolution mode and bad-record policy for each tier are still open (Story 2.7). There is an example test in Appendix A.3.
 
 ### 8.3 Rules
 
@@ -284,8 +274,8 @@ NFR tests prove how well CDP works: speed, scale, security, recovery, auditabili
 - **Masking:** analysts see email as `j***@***.com`.
 - **Recoverability:** a Delta `RESTORE` completes inside 15 minutes.
 - **Auditability:** 100% of runs are logged.
-- **Cost:** within the agreed DBU budget, checked the next day from `system.billing.usage`.
-- **App load:** 95% of API calls under 1 second and pages within 3 seconds at 20 users, measured with Locust.
+- **Cost:** within the agreed DBU budget, checked the next day from `system.billing.usage`. Not a gate condition; an overrun raises an S3 defect.
+- **App load:** 95% of API calls under 1 second at 20 users (Locust), and critical pages within 3 seconds (Playwright).
 
 These tests run on production-sized masked or synthetic data in a performance schema, on production-sized compute, before each release or major change. A run that passes but is 20% slower than the last three is flagged.
 
@@ -331,7 +321,7 @@ Jenkins deploys the code, starts the tests and collects the results. Databricks 
 
 ### 11.1 What is automated
 
-The 80–85% target is one ratio per release: automated Xray tests in scope for tier 1 and 2, divided by all Xray tests in scope. DQX and reconciliation each count as one automated gate test per pipeline. Section 12 lists what stays manual.
+The automation ratio is defined in section 3, with its counting rules in Story 1.3. DQX and reconciliation count as two automated gate tests per pipeline, one each. Section 12 lists what stays manual.
 
 ### 11.2 Setup and isolation
 
@@ -365,7 +355,9 @@ Release-candidate runs also execute in the test environment. Pre-production is o
 - the reconciliation log table, unchanged;
 - a new QA results table, holding pytest results, the developer build result and release-gating manual results from Xray.
 
-DQX and reconciliation log by Databricks run. A run correlation table, `cdp_qa.results.run_correlation`, links each run to its `build_tag` and `git_commit`, and every job receives both as parameters. The view's columns are listed in Appendix C.2.
+DQX and reconciliation log by Databricks run. A run correlation table, `cdp_qa.results.run_correlation`, links each run to its `build_tag` and `git_commit`, and every job receives both as parameters. Every row also carries its `stage`. The view's columns are listed in Appendix C.2.
+
+**Gate contract.** The release gate (section 15.2) reads the view for the candidate's commit and joins what the view does not hold: open defects and their severity from Jira, and waivers with their expiry and UAT sign-off from Xray. Required stages are merge (smoke, targeted), nightly (full, failure) and release candidate (full, failure, NFR, app load, UAT). A required stage with no results counts as failed.
 
 ## 12. Manual and process testing
 
@@ -418,7 +410,7 @@ The exact environment and catalog names are confirmed in Epic 1.
 
 ### 14.2 Types of test data
 
-Hand-made rows serve functional and transformation tests. Generated data matching production counts and skew serves NFR tests. Masked samples serve UAT and exploratory testing, and deliberately broken files serve failure tests.
+Hand-made rows serve functional and transformation tests, production-scale generated data serves NFR tests, masked samples serve UAT, and broken files serve failure tests.
 
 ### 14.3 Rules
 
@@ -432,8 +424,8 @@ Masked or tokenised production data is still personal data under GDPR.
 - **Masking:** join keys are tokenised deterministically. Names, emails, phone numbers and addresses are replaced. Free text is dropped. Identifying combinations, such as birth date with postcode, are generalised.
 - **Access:** masked copies can be read only by QA, the test principals and named UAT users.
 - **Retention:** they are refreshed or deleted at least every 90 days.
-- **No real data in reports:** Jira, Allure, Xray and the results `message` column never contain row values from non-synthetic data.
-- **Erasure:** the erasure scenario in section 6.2 proves that deletions reach every gold table and leave Delta history.
+- **No real data in reports:** Jira, Allure, Xray, Jenkins logs, Playwright traces and screenshots, API error payloads and the results `message` column never contain row values from non-synthetic data.
+- **Erasure:** the erasure scenario in section 6.2 proves that deletions reach every layer and copy and are purged from Delta history.
 
 ## 15. Entry and exit criteria
 
@@ -442,7 +434,7 @@ A release goes to production only when every exit criterion is met, or a named a
 ### 15.1 Criteria by stage
 
 - **Unit:** complete when the developer build for this commit has passed.
-- **Functional and transformation:** start once deployed to test with the unit gate green. Complete when all priority 1 tests pass, every other failure has an S3 or S4 defect or a waiver, and no S1 or S2 defect is open.
+- **Functional and transformation:** start once deployed to test with the unit gate green. Complete when all priority 1 tests pass (scales in section 16.1), every other failure has an S3 or S4 defect or a waiver, and no S1 or S2 defect is open.
 - **DQX and reconciliation:** start once the pipeline has run in test. Complete when there is no critical DQX failure and no unexplained break.
 - **Failure:** start once the functional stage is green. Complete when the tier 1 scenarios pass, or have an accepted defect with a workaround.
 - **NFR:** start once the candidate is frozen and performance data is loaded. Complete when the targets are met, or a miss is accepted in writing.
@@ -450,9 +442,9 @@ A release goes to production only when every exit criterion is met, or a named a
 
 ### 15.2 Release gate
 
-The gate is one query on the unified results view for the candidate's commit. The release is go only when:
+The gate reads the unified results view for the candidate's commit, joined with Jira and Xray (section 11.4). The release is go only when:
 
-1. Every stage has results for this commit.
+1. Every required stage has results for this commit. Missing evidence, such as a failed Xray import, is no-go.
 2. Every priority 1 test passed. Quarantined tests don't count as passed.
 3. Every other failure has a linked S3 or S4 defect, or an unexpired waiver.
 4. No S1 or S2 defect is open.
@@ -508,10 +500,10 @@ Each tool answers a different question. ReportPortal was trialled and is not ado
 **Xray integration:**
 
 - Each test carries its Xray key as a pytest marker.
-- A `conftest.py` hook writes the key to the JUnit report with `record_property`; this needs `junit_family = xunit1`.
+- A `conftest.py` hook writes the key to the JUnit report as the `test_key` property with `record_property`; this needs `junit_family = xunit1`.
 - Jenkins imports the report through Xray's REST API. The latest Xray release is assumed, and the endpoint for Cloud or Server/Data Center is set in configuration.
-- Tests without a key are not imported.
-- DQX and reconciliation appear in Xray as one gate test per pipeline.
+- Tests without a key are not imported and are listed in the build. A failed import marks the build unstable.
+- DQX and reconciliation appear in Xray as two gate tests per pipeline, one per framework.
 
 ### 16.5 Dashboard
 
@@ -523,14 +515,7 @@ Every build sends a Jenkins notification with links. A short quality summary goe
 
 ## 17. Roles and responsibilities
 
-Quality is shared, but each activity has one accountable role. The full RACI is in Appendix C.4.
-
-- **The QA lead** owns this framework, the coverage matrix, the QA suite, the unified view and the release evidence.
-- **QA engineers** design and automate tests, triage failures and support UAT.
-- **Developers** write unit tests, meet the testability requirements and fix defects.
-- **The DQX and reconciliation owners** maintain their rules and log tables, add rules on request, and pass build parameters to their tasks.
-- **The platform team** provides access, catalogs and compute, and runs production monitoring.
-- **The product owner and LoB representatives** own requirements and NFR targets, and sign off UAT and releases.
+Quality is shared, but each activity has one accountable role. The QA lead owns this framework, the coverage matrix, the QA suite, the unified view and the release evidence; QA engineers design, automate and triage tests and support UAT. Developers own unit tests, testability and fixes. The DQX and reconciliation owners maintain their rules and log tables and pass build parameters to their tasks. The platform team provides access, catalogs and compute, and runs production monitoring. The product owner and LoB representatives own requirements and NFR targets, and sign off UAT and releases. The full RACI is in Appendix C.4.
 
 ## 18. Generic CDP layer and line-of-business context
 
@@ -571,16 +556,12 @@ CDP uses bronze, silver and gold in Unity Catalog, and all names here are illust
 - [ ] Tier 1 tables and the pilot pipeline and LoB (Story 1.1).
 - [ ] Owners and columns of the DQX and reconciliation log tables (Story 1.4).
 - [ ] Real SLAs for run time, freshness and cost.
-- [ ] Current deployment method: Asset Bundles or other.
+- [ ] Current deployment method (Asset Bundles or other) and unit test coverage.
 - [ ] Xray Cloud or Server/Data Center (latest release assumed).
 - [ ] Schema-evolution and bad-record policy per tier (Story 2.7).
 - [ ] Who in data protection approves masked data, and on what basis.
-- [ ] The release gate's notification channel.
-- [ ] Whether any sources run as continuous streams.
-- [ ] Current unit test coverage.
-- [ ] Other CDP UI apps and the tables they read.
-- [ ] App data access: the app's own service principal or the user's own permissions.
-- [ ] Unattended Playwright sign-in and per-build app copies (Story 2.9).
+- [ ] The release gate's notification channel, and whether any sources run as continuous streams.
+- [ ] Other CDP apps and their tables; each app's data access model; unattended Playwright sign-in and per-build copies (Stories 1.1, 2.9).
 
 ## 20. Backlog: epics, stories and tasks
 
@@ -591,13 +572,13 @@ The work is split into eight epics, listed in the proposed order. The Product te
 | 1 | Inventory, coverage matrix and baseline | We know what exists, what is covered and where we start from | None | M | Must, first |
 | 2 | Test foundation | Any CDP pipeline can be tested in isolation from Jenkins | Platform team, developers | L | Must, first |
 | 3 | Pilot on one tier 1 pipeline | Every QA test type proven on one pipeline, with its real cost known | 1, 2 | L | Must |
-| 4 | Unified results view and reporting | One view, one dashboard and Xray evidence across every framework | 2, DQX and reconciliation owners | M | Must |
-| 5 | NFR targets and test suite | Agreed SLAs, tested before every release and monitored after | 2, product owner | M | Should |
+| 4 | Unified results view and reporting | One view, one dashboard and Xray evidence across every framework | 2, DQX and reconciliation owners | L | Must |
+| 5 | NFR targets and test suite | Agreed SLAs, tested before every release and monitored after | 2, product owner | L | Should |
 | 6 | Rollout | Coverage target met for tier 1, then tier 2 | 3 | L | Should |
 | 7 | Release gate and spec-driven process | Automated go or no-go; definition of ready and done in use | 4 | M | Should |
 | 8 | Further LoB onboarding | Every LoB in scope runs on the framework through configuration | 6 | M | Could |
 
-**Sizes:** S is up to 3 days, M is up to one sprint, and L is more than one sprint and must be split before it starts. The full user stories, with acceptance criteria and tasks, are in the Backlog tab (exported here as `CDP_QA_Backlog.pdf`).
+**Sizes:** S is up to 3 days, M is up to one sprint, and L is more than one sprint and must be split before it starts. The full user stories, with acceptance criteria and tasks, are in the Backlog tab, exported as the companion CDP QA Backlog (`CDP_QA_Backlog.pdf`). Epic sizes are estimates, not sums of story sizes.
 
 ### Suggested first increment
 
@@ -630,10 +611,11 @@ CASES = load_cases("mappings/customer_profile.yaml")  # one unique key per case
 
 @pytest.fixture(scope="session")
 def output_by_key(tables, run_pipeline_once):
-    # one job run and one query for every case of this table
+    # one job run per table: xdist_group keeps its cases on one worker
     rows = tables.gold("customer_profile").collect()
     return {r.customer_id: r for r in rows}
 
+@pytest.mark.xdist_group("customer_profile")  # run with --dist loadgroup
 @pytest.mark.parametrize("case", CASES, ids=lambda c: c.rule_id)
 def test_mapping_rule(case, output_by_key):
     row = output_by_key.get(case.key)
@@ -714,7 +696,7 @@ pipeline {
       when { not { anyOf { triggeredBy 'TimerTrigger'; expression { params.RELEASE_CANDIDATE } } } }
       steps {
         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-          sh 'pytest --pipelines=$(tools/changed_pipelines.py) --levels=smoke,targeted --with-progression -n auto --junitxml=reports/merge.xml'
+          sh 'pytest --pipelines=$(tools/changed_pipelines.py) --levels=smoke,targeted --with-progression -n auto --dist loadgroup --junitxml=reports/merge.xml'
         }
       }
     }
@@ -722,7 +704,7 @@ pipeline {
       when { anyOf { triggeredBy 'TimerTrigger'; expression { params.RELEASE_CANDIDATE } } }
       steps {
         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
-          sh 'pytest --levels=full --with-progression -n auto --junitxml=reports/full.xml'
+          sh 'pytest --levels=full --with-progression -n auto --dist loadgroup --junitxml=reports/full.xml'
         }
         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
           sh 'pytest tests/failure --junitxml=reports/failure.xml'
@@ -730,7 +712,7 @@ pipeline {
       }
     }
     stage('NFR') {
-      when { expression { params.RUN_NFR } }
+      when { anyOf { expression { params.RUN_NFR }; expression { params.RELEASE_CANDIDATE } } }
       steps {
         catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
           sh 'pytest tests/nfr --junitxml=reports/nfr.xml'
@@ -745,8 +727,12 @@ pipeline {
     always {
       junit testResults: 'reports/*.xml', allowEmptyResults: true
       allure results: [[path: 'allure-results']]
-      sh 'python tools/publish_results.py --build $BUILD_ID_SAFE --commit $GIT_COMMIT || true'
-      sh 'python tools/import_xray.py reports/*.xml || true'
+      catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+        sh 'python tools/publish_results.py --build $BUILD_ID_SAFE --commit $GIT_COMMIT'
+      }
+      catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+        sh 'python tools/import_xray.py reports/*.xml'
+      }
     }
     cleanup {
       sh 'python tools/cleanup_build_env.py --build $BUILD_ID_SAFE || true'
@@ -755,7 +741,7 @@ pipeline {
 }
 ```
 
-Three details matter. `catchError` lets later stages run after a test failure, so one failing functional test does not hide the failure tests. Reporting steps tolerate a missing report, because a build that fails at Deploy produces none. Cleanup sits in `post { cleanup }`, which runs last whatever happened before it.
+Four details matter. NFR runs for every release candidate, or on request. `catchError` lets later stages run after a test failure, so one failing functional test does not hide the failure tests. A failed publish or Xray import marks the build unstable rather than being ignored, and the gate treats the missing evidence as no-go; a build that fails at Deploy simply has no report. Cleanup sits in `post { cleanup }`, which runs last whatever happened before it.
 
 ### A.6 Line-of-business configuration (section 18)
 
@@ -765,6 +751,7 @@ line_of_business: retail
 pipelines:
   - name: cdp_customer_pipeline
     target: gold.customer_profile
+    paths: [src/customer/, resources/customer_job.yml]  # changed files that touch it
     tier: 1
     keys: [customer_id]
     history: scd2
@@ -839,6 +826,7 @@ def test_dashboard_filter_journey(dashboard_page):  # signed-in Playwright page
 | `test_name`, `xray_key`, `rule_id` | The check, its Xray test and its mapping rule |
 | `status` | Passed, failed, error, skipped, quarantined or waived |
 | `duration_seconds`, `message` | Run time and failure detail, with no real row values |
+| `stage` | Merge, nightly or release candidate, and the stage within it, so the gate can check required stages (section 11.4) |
 
 ### C.3 Spec-driven example (section 13)
 
@@ -876,7 +864,7 @@ R = does the work, A = accountable, C = consulted, I = informed.
 | Scenario | Expected behaviour |
 | --- | --- |
 | Missing source file | Skip or fail with an alert; gold unchanged, not emptied |
-| Renamed column | As the schema policy states. Auto Loader's default `addNewColumns` adds the new column and leaves the old one null, so the policy must block or alert; never silent nulls |
+| Renamed column | As the schema policy states. With Auto Loader's `addNewColumns` (the default when no schema is supplied), the stream stops with an UnknownFieldException and adds the new column; after a restart the old column is null for new rows. The policy must block or alert; never silent nulls |
 | New column | As the schema policy states; existing columns unaffected |
 | Unparseable rows | Good rows load; bad rows go to `_rescued_data` or the bad-records path, and a DQX rule raises them |
 | Rule-breaking rows | Good rows reach gold; bad rows go to the DQX quarantine; alert above threshold |
