@@ -21,6 +21,10 @@ The decisions taken while drafting the spec, and why. Update this file whenever 
 | 2026-11-15 | Code samples moved to Appendix A; ReportPortal rationale to Appendix B | Length |
 | 2026-11-15 | Backlog stories written in full, with size, acceptance criteria and tasks | Ready for prioritisation |
 | 2026-11-15 | CDP's Databricks Apps (FastAPI and React) brought into scope: layered API, access, UI and load testing (section 6.5) | CDP's apps are hosted in Databricks |
+| 2026-11-15 | The QA suite extends the existing pytest framework and Allure set-up | Confirmed by the QA lead |
+| 2026-11-15 | Design assumes the latest Xray release; Cloud or Server/Data Center import endpoint is configurable | Confirmed by the QA lead |
+| 2026-11-15 | DQX and reconciliation each have their own log tables (confirmed); columns documented in Story 1.4 | Confirmed by the QA lead |
+| 2026-11-15 | Known apps in scope: lineage detection and dashboard; others to be listed in Story 1.1 | Confirmed by the QA lead |
 
 ## Still open
 
@@ -30,8 +34,7 @@ See section 19.3 of the spec. As of 2026-11-15:
 - owners and log table columns for DQX and reconciliation
 - real SLAs
 - deployment method
-- reuse of the existing pytest framework
-- Xray edition
+- Xray Cloud or Server/Data Center (latest release assumed)
 - schema-evolution policy
 - data protection approval
 - notification channel

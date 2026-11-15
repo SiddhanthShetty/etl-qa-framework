@@ -6,7 +6,7 @@ Nov 12, 2026 · @Siddhanth
 
 This spec defines one QA testing framework for CDP, our Databricks data product, so that every release can be shown to be trustworthy before it reaches consumers.
 
-The framework does not replace what exists. It joins the DQX data quality framework, the CDP reconciliation framework and developer unit tests with a new QA-owned pytest suite, triggers and gates all of them from Jenkins, and reports them in one place.
+The framework does not replace what exists. It joins the DQX data quality framework, the CDP reconciliation framework and developer unit tests with QA tests built on the existing pytest framework, triggers and gates all of them from Jenkins, and reports them in one place.
 
 | Item | Detail |
 | --- | --- |
@@ -15,7 +15,7 @@ The framework does not replace what exists. It joins the DQX data quality framew
 | Decision needed | The Product team prioritises the backlog in section 20 |
 | Automation split | 80–85% automated, 15–20% manual or process |
 | New work for QA | Functional, transformation, failure and NFR tests; Jenkins orchestration; one unified results view and dashboard |
-| Reused as is | DQX (data quality), reconciliation framework (source-to-target matching), developer unit tests |
+| Reused as is | DQX (data quality), reconciliation framework (source-to-target matching), developer unit tests, the existing pytest framework with Allure reporting |
 
 Reviewers are asked to confirm four things:
 
@@ -33,7 +33,7 @@ The purpose is to give CDP one agreed way of testing, so that quality does not d
 - Ingestion into bronze, including file and stream landing through Auto Loader or equivalent.
 - Transformations from bronze to silver to gold.
 - Consumer-facing gold tables and views.
-- CDP's Databricks Apps (FastAPI backend, React frontend) and the data they serve (section 6.5).
+- CDP's Databricks Apps (FastAPI backend, React frontend), such as the lineage detection and dashboard apps, and the data they serve (section 6.5).
 - Databricks jobs and workflows that run these pipelines, including scheduling, dependencies, retries and alerts.
 - Access control and masking on CDP data in Unity Catalog.
 - Deployment of pipeline and app code to the test environment through Jenkins.
@@ -189,13 +189,15 @@ Each testing need has exactly one tool and one owner, so no rule is written twic
 | Unit tests on transformation code | pytest | Developers | Exists, coverage to be confirmed |
 | Data quality checks | CDP data quality framework built on Databricks DQX | Its current owning team | Exists |
 | Source-to-target matching | CDP reconciliation framework | Its current owning team | Exists |
-| Functional, integration, transformation, failure and NFR tests | pytest suite | QA | New |
+| Functional, integration, transformation, failure and NFR tests | Existing pytest framework, extended | QA | Exists; to be extended |
 | Orchestration of all test runs | Jenkins | QA with the platform team | Exists, test stages are new |
 | Results store and dashboard | Unified view over Delta result tables, and a Databricks dashboard | QA | New |
 | Detailed report of each test run | Allure, published by Jenkins | QA | Exists |
 | Traceability, manual tests, defects and release evidence | Xray in Jira | QA with the Product team | Exists, use to be expanded |
 | Databricks Apps unit tests (FastAPI and React) | pytest with FastAPI TestClient; Vitest or Jest | Developers | To be confirmed |
 | Databricks Apps API, access, UI and performance tests | pytest with httpx, Playwright, Locust | QA | New |
+
+**Reusing the existing pytest framework.** The QA suite extends the existing pytest framework rather than starting a new one. Its fixtures, configuration and Allure set-up stay. This spec adds four things to it: build isolation fixtures, the Xray key hook, results publishing, and the folders in Appendix A.4. Story 2.8 maps the existing framework against Appendix A.4 and lists the gaps.
 
 ### 5.1 Which tool does a new check belong in?
 
@@ -268,6 +270,13 @@ A functional test passes only when the job succeeds and every assertion holds. A
 ### 6.5 Databricks Apps (FastAPI and React)
 
 CDP's Databricks Apps are tested in layers, with most checks at the API level and only a few critical journeys in a browser. API tests are fast and stable; browser tests are slow and break when the layout changes.
+
+CDP has several UI apps. The two known so far set the pattern for the rest; the full list is gathered in Story 1.1.
+
+| App | What it does | Key QA checks |
+| --- | --- | --- |
+| Lineage detection | Shows how tables and columns flow from source to gold | The lineage returned for a known table matches its source of truth, such as `system.access.table_lineage` or the app's own lineage tables; a user sees lineage only for tables they can access; a new or dropped table appears or disappears after the next refresh |
+| Dashboard | Shows CDP metrics and KPIs | Each KPI equals the matching SQL on gold for the same filters and dates; filters, date ranges and empty states behave correctly; numbers are not shown as current when the data behind them is stale |
 
 | Layer | What it proves | Tool | Owner | When |
 | --- | --- | --- | --- | --- |
@@ -722,7 +731,7 @@ Three tools carry reporting, and each answers a different question. ReportPortal
 **How they connect**
 
 - The Jenkins publish stage does four things on every run: JUnit results to Jenkins, the Allure report, pytest results to Delta, and a test execution in Xray against the release.
-- Each automated test carries its Xray test key as a pytest marker. A conftest.py hook writes the key into the JUnit report with record\_property("test\_key", ...), which needs junit\_family = xunit1 in pytest.ini. A test with no key is not imported, so Xray never creates stray Test issues.
+- Each automated test carries its Xray test key as a pytest marker. A conftest.py hook writes the key into the JUnit report with record\_property("test\_key", ...), which needs junit\_family = xunit1 in pytest.ini. A test with no key is not imported, so Xray never creates stray Test issues. The design assumes the latest Xray release. Jenkins imports results through Xray's REST API JUnit import. Its endpoint and authentication differ between Xray Cloud and Xray Server/Data Center, so the import script reads both from configuration.
 - DQX and reconciliation results are not pushed to Xray rule by rule. Each pipeline has one gate test in Xray that passes or fails on the run's results and links to the dashboard for detail.
 - Defects are raised in Jira and linked to the failing Xray execution, with a link to the Allure report for that run.
 - Manual tests, exploratory sessions and UAT are planned and executed in Xray.
@@ -840,19 +849,18 @@ The biggest risk to this plan is dependency on teams outside QA: access from the
 
 ### 19.3 Open questions
 
-- [ ] Which tables and pipelines are tier 1, and which line of business does the pilot pipeline belong to?
-- [ ] Who owns the DQX framework and the reconciliation framework, and what columns do their log tables have?
+- [ ] Which tables and pipelines are tier 1, and which pipeline and line of business is the pilot? To be finalised in Story 1.1.
+- [ ] Both frameworks write to their own log tables (confirmed). Who owns each, and what columns do the tables have? (Story 1.4)
 - [ ] What are the real SLAs for run time, freshness and cost?
 - [ ] How are pipelines deployed today: Asset Bundles or another method?
-- [ ] Does the new QA suite extend the existing pytest framework (fixtures, Allure set-up) or replace it?
-- [ ] Which Xray edition is used, Cloud or Server/Data Center? Its import endpoint and authentication differ.
-- [ ] What schema-evolution and bad-record policy should each tier follow?
+- [ ] The latest Xray release is assumed. Is it Xray Cloud or Server/Data Center? The import endpoint and authentication differ.
+- [ ] What schema-evolution and bad-record policy should each tier follow? To be finalised in Story 2.7.
 - [ ] Who in data protection approves the use of masked production data, and on what basis?
 - [ ] Which notification channel does the release gate post to?
 - [ ] Do any CDP sources run as continuous streams rather than triggered runs?
 - [ ] What is the current unit test coverage?
-- [ ] Which Databricks Apps does CDP own, who uses them, and which tables does each read?
-- [ ] Do the apps use the app's own service principal or on-behalf-of-user access to data?
+- [ ] Which UI apps does CDP own besides the lineage detection and dashboard apps, who uses them, and which tables or system tables does each read?
+- [ ] Do the apps use the app's own service principal or on-behalf-of-user access to data? This decides whether lineage respects each user's permissions.
 - [ ] How can Playwright sign in to a Databricks App unattended, and can each build have its own app copy within the workspace's limits? (Story 2.9)
 
 ## 20. Backlog: epics, stories and tasks
@@ -875,7 +883,7 @@ The work is split into eight epics, listed in the proposed order. The Product te
 ### Epic 1: Inventory, coverage matrix and baseline
 
 - **Story 1.1 (S).** As QA lead, I want every CDP pipeline and table listed with a tier, so that testing effort goes to the highest risk first.
-  - AC: every job and table is listed with its layer, owner, consumers and tier.
+  - AC: every job, table and UI app is listed with its layer, owner, consumers and tier.
   - AC: the product owner has agreed the tier 1 list, and the pilot pipeline is chosen from it.
   - Tasks: export jobs from the Jobs API and tables from Unity Catalog; workshop tiers with the product owner.
 - **Story 1.2 (M).** As QA lead, I want a coverage matrix for tier 1 and 2 tables, so that gaps and overlaps between frameworks are visible.
@@ -899,10 +907,10 @@ The work is split into eight epics, listed in the proposed order. The Product te
   - AC: Jenkins authenticates to Databricks with OAuth and can create and drop schemas in the test catalog only.
   - AC: one test principal exists for each consumer role, in the same Unity Catalog groups as real users (section 9.2).
   - Tasks: raise the access request; store credentials in Jenkins; prove access with a one-line connection test.
-- **Story 2.2 (M).** As a QA engineer, I want a test repository with shared fixtures, so that every test is written the same way.
+- **Story 2.2 (M).** As a QA engineer, I want the existing pytest framework extended with the shared fixtures this spec needs, so that every test is written the same way.
   - AC: the layout in Appendix A.4 exists, with `tables`, `landing` and `jobs` fixtures that resolve to the build's own schemas and paths.
   - AC: markers are registered in `pytest.ini`, and an unregistered marker fails the run.
-  - Tasks: create the repository; build the fixtures; add the Xray key hook (section 16.4).
+  - Tasks: add the missing folders to the existing repository; build the new fixtures; add the Xray key hook (section 16.4).
 - **Story 2.3 (S).** As a QA engineer, I want a Jenkins pipeline that deploys to test and runs one smoke test, so that the end-to-end path is proven before real tests are written.
   - AC: a merge triggers deploy, one smoke test, publish and cleanup, and the build shows the JUnit result.
   - AC: a deliberately failing test marks the build unstable and cleanup still runs.
@@ -920,8 +928,8 @@ The work is split into eight epics, listed in the proposed order. The Product te
 - **Story 2.7 (S).** As QA lead, I want a schema-evolution and bad-record policy for each tier, so that failure tests have agreed expected results (section 8.2).
   - AC: for each tier, the policy states the Auto Loader schema-evolution mode, the parse mode and where rejected rows go.
   - AC: section 8.2's open rows are updated to match.
-- **Story 2.8 (S).** As QA lead, I want a decision on reusing the existing pytest and Allure framework, so that the new suite builds on it instead of duplicating it.
-  - AC: a short comparison records what is reused, what is migrated and what is retired.
+- **Story 2.8 (S).** As QA lead, I want the existing pytest and Allure framework compared with what this spec needs, so that it is extended rather than duplicated.
+  - AC: a short gap list records what is kept as it is, what is added and what is changed.
   - AC: section 5 and Story 4.6 are updated to match.
 
 * **Story 2.9 (S).** As a QA engineer, I want a spike on testing a Databricks App unattended, so that the app test approach in section 6.5 is proven before we build on it.
@@ -969,7 +977,7 @@ The work is split into eight epics, listed in the proposed order. The Product te
   - AC: the latest run and release readiness views are live first; the others follow in priority order.
   - AC: every view reads only from the unified results view.
 - **Story 4.6 (S).** As a developer, I want the Allure report published from Jenkins on every build, so that I can see why a test failed.
-  - AC: every build links to its Allure report, including failed builds. Scope follows the decision in Story 2.8.
+  - AC: every build links to its Allure report, including failed builds. The existing Allure set-up is reused.
 - **Story 4.7 (M).** As QA lead, I want pytest results imported into Xray from Jenkins, so that requirement coverage and release evidence live in Jira.
   - AC: each build creates one Xray test execution against the release, and every result lands on its existing Xray test.
   - AC: tests without an Xray key are reported and not imported.
@@ -1100,7 +1108,7 @@ def test_crash_before_gold_is_recoverable(landing, jobs, tables):
     assert gold.select("customer_id").distinct().count() == 1000
 ```
 
-### A.4 Test repository layout (section 11)
+### A.4 Target layout of the extended pytest framework (section 11)
 
 ```text
 cdp-qa-tests/
@@ -1213,24 +1221,30 @@ pipelines:
 ### A.7 Databricks App tests (section 6.5)
 
 ```python
-# API test: numbers from the app match gold, called as a test principal
-def test_customer_summary_matches_gold(app_client, tables):
-    resp = app_client.get("/api/customers/summary", params={"country": "IE"})
+# Dashboard app: a KPI from the API equals the same query on gold
+def test_active_customers_kpi_matches_gold(dashboard_client, tables):
+    resp = dashboard_client.get("/api/kpis/active-customers", params={"country": "IE"})
     assert resp.status_code == 200
-    body = resp.json()
     expected = (tables.gold("customer_profile")
                 .filter("country = 'IE' AND is_current").count())
-    assert body["customer_count"] == expected
+    assert resp.json()["value"] == expected
 
-def test_summary_refuses_unauthenticated_call(app_url, httpx_client):
-    resp = httpx_client.get(f"{app_url}/api/customers/summary")
+# Lineage app: upstream tables for a known gold table match the lineage source
+def test_lineage_for_customer_profile(lineage_client, expected_lineage):
+    resp = lineage_client.get("/api/lineage", params={"table": "gold.customer_profile"})
+    assert resp.status_code == 200
+    upstream = {edge["source"] for edge in resp.json()["edges"]}
+    assert upstream == expected_lineage("gold.customer_profile")
+
+# Access: a call without sign-in is refused
+def test_dashboard_refuses_unauthenticated_call(dashboard_url, httpx_client):
+    resp = httpx_client.get(f"{dashboard_url}/api/kpis/active-customers")
     assert resp.status_code in (401, 302)
 
-# UI test: one critical journey in a real browser
-def test_search_customer_journey(app_page):  # app_page: signed-in Playwright page
-    app_page.get_by_test_id("customer-search").fill("C100")
-    app_page.get_by_test_id("search-submit").click()
-    expect(app_page.get_by_test_id("customer-city")).to_have_text("Cork")
+# UI: one critical journey in a real browser
+def test_dashboard_filter_journey(dashboard_page):  # signed-in Playwright page
+    dashboard_page.get_by_test_id("country-filter").select_option("IE")
+    expect(dashboard_page.get_by_test_id("kpi-active-customers")).not_to_have_text("")
 ```
 
 ## Appendix B. Why ReportPortal is not adopted

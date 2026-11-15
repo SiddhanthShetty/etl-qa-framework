@@ -20,11 +20,11 @@ You are helping me, a QA Test Automation Lead, write the QA Testing Framework Sp
 - A **data quality framework built on Databricks DQX**. It writes results to its own Delta log table.
 - A **CDP reconciliation framework** for source-to-target matching. It writes results to its own Delta log table.
 - **Developer-owned unit tests** in pytest. QA does not write unit tests and only reads the developer build result.
-- An existing **pytest framework with Allure HTML reporting**.
-- **Jira with the Xray plugin**, which the team wants to use more.
+- An existing **pytest framework with Allure HTML reporting**. The QA suite **extends it**; it is not replaced.
+- **Jira with the Xray plugin**, which the team wants to use more. Assume the **latest Xray release**; the import script reads the Cloud or Server/Data Center endpoint from configuration.
 - **Jenkins** for CI/CD. Not GitHub Actions.
 - A **ReportPortal proof of concept** was done. The decision is not to adopt it for now: it overlaps with Allure, Xray and the Databricks dashboard, and it needs its own server.
-- **CDP's Databricks Apps** use a FastAPI backend and a React frontend, hosted in Databricks.
+- **CDP's Databricks Apps** use a FastAPI backend and a React frontend, hosted in Databricks. There are several, including a **lineage detection** app and a **dashboard** app.
 - **Jobs can be parameterised.** Lakeflow Declarative Pipelines (DLT) are not used today but may be later.
 
 ## Requirements from the planning whiteboard

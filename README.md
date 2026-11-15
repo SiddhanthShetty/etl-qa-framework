@@ -33,7 +33,7 @@ After any change, update the Markdown spec first, regenerate the PDF and DOCX fr
 ## Notes
 
 - Table names, SLAs and targets in the spec are illustrative until Epic 1 measures the real baseline.
-- The PDF is 52 A4 pages: sections 1 to 19, the full backlog and the appendices. The 15 to 20 page target applies to the main body; prompt 3.4 covers bringing it into range.
+- The PDF is 54 A4 pages: sections 1 to 19, the full backlog and the appendices. The 15 to 20 page target applies to the main body; prompt 3.4 covers bringing it into range.
 - This repository contains internal project content, including reviewer names and whiteboard photos. Keep it in a private repository.
 
 ## Push to GitHub
